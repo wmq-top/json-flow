@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { Handle, Position } from '@vue-flow/core'
 
-defineProps(['nodeProps', 'startPointId', 'endPointId'])
+defineProps(['nodeProps', 'styleConfig'])
 </script>
 
 <template>
-  <Handle v-if="startPointId !== nodeProps.id" type="target" :position="Position.Left" />
-  <div class="transverse-node-item">
-    {{ nodeProps.label }}
+  <Handle v-if="!nodeProps.data.isStartNode" type="target" :position="Position.Left" />
+  <div class="transverse-node-item" :style="styleConfig">
+    {{ nodeProps.id }}
   </div>
-  <Handle v-if="endPointId !== nodeProps.id" type="source" :position="Position.Right" />
+  <Handle v-if="!nodeProps.data.isEndNode" type="source" :position="Position.Right" />
 </template>
 
 <style lang="less" scoped>

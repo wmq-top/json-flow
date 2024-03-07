@@ -1,52 +1,60 @@
 <script setup lang="ts">
 import { VueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
-import { ref, toRefs, watch } from 'vue'
-import type { EdgeType, NodeType } from './graph-type'
+import { ref, toRefs } from 'vue'
+import type { EdgeType, JsonArrayType, NodeItemConfig, NodeType } from './graph-type'
 import TransverseNode from '~/components/Graph/TransverseNode.vue'
+import { generateEdges, generatePosition, jsonToNodes } from '~/utils/jsonToNodes'
 
-const props = withDefaults(defineProps<{
+interface PropsType<T extends boolean> {
+  needTransFormNodes?: T
   width?: string | number
   height?: string | number
-  nodes?: NodeType[]
+  nodes?: T extends true ? JsonArrayType[] : NodeType[]
   edges?: EdgeType[]
+  animated?: boolean
   zoomConfig?: {
     defaultZoom?: number
     maxZoom?: number
     minZoom?: number
   }
-}>(), {
+  nodeItemConfig?: NodeItemConfig
+}
+const props = withDefaults(defineProps<PropsType<true> | PropsType<false>>(), {
+  needTransFormNodes: true,
   width: '100%',
   height: '100%',
-  nodes: () => [] as NodeType[],
-  edges: () => [] as EdgeType[],
+  nodes: () => [],
+  edges: () => [],
+  animated: false,
   zoomConfig: () => ({
     defaultZoom: 1,
     maxZoom: 3,
     minZoom: 0.5,
   }),
+  nodeItemConfig: () => ({
+    gap: 64,
+    x: 100,
+    y: 100,
+    height: 100,
+    width: 160,
+  }),
 })
 
-const { nodes, edges, zoomConfig } = toRefs(props)
+const { nodes, zoomConfig, nodeItemConfig, animated, needTransFormNodes } = toRefs(props)
 
-const startPointId = ref<string | null>(null)
-const endPointId = ref<string | null>(null)
-
-watch(() => nodes.value, () => {
-  startPointId.value = nodes.value.find(i => i.isStartNode)?.id || null
-  endPointId.value = nodes.value.find(i => i.isEndNode)?.id || null
-}, {
-  deep: true,
-  immediate: true,
-})
+const nodesList = ref(needTransFormNodes.value
+  ? generatePosition(jsonToNodes(nodes.value), nodeItemConfig.value)
+  : generatePosition(nodes.value as NodeType[], nodeItemConfig.value))
+const edgesList = ref(generateEdges(nodesList.value, animated.value))
 </script>
 
 <template>
   <!-- eslint-disable vue/no-extra-parens -->
   <div class="graph-content-wrap" :style="{ width, height }">
     <VueFlow
-      :nodes="(nodes as any)"
-      :edges="edges"
+      :nodes="(nodesList as any)"
+      :edges="edgesList"
       selection-key-code="1"
       :default-viewport="{ zoom: zoomConfig.defaultZoom }"
       :max-zoom="zoomConfig.maxZoom"
@@ -54,7 +62,10 @@ watch(() => nodes.value, () => {
     >
       <Background />
       <template #node-transverse="nodeProps">
-        <TransverseNode :node-props="nodeProps" :start-point-id="startPointId" :end-point-id="endPointId" />
+        <TransverseNode
+          :node-props="nodeProps"
+          :style-config="{ maxWidth: `${nodeItemConfig.width}px`, maxHeight: `${nodeItemConfig.height}px` }"
+        />
       </template>
     </VueFlow>
   </div>
